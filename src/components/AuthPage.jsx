@@ -85,7 +85,7 @@ function IconShieldSmall() {
   );
 }
 
-export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onResetPassword }) {
+export function AuthPage({ busyMessage, onLogin, onSignup, onResetPassword }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState("login");
   const [resetToken, setResetToken] = useState("");
@@ -103,7 +103,6 @@ export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onR
     studentId: "",
     password: "",
   });
-  const [forgotEmail, setForgotEmail] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
   const [resetFormError, setResetFormError] = useState("");
@@ -230,15 +229,6 @@ export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onR
     const ok = await onSignup(payload);
     if (!ok) {
       bumpTurnstile();
-    }
-  }
-
-  async function handleForgotSubmit(event) {
-    event.preventDefault();
-    const ok = await onForgotPassword(forgotEmail.trim());
-    if (ok) {
-      setForgotEmail("");
-      goToLogin();
     }
   }
 
@@ -371,7 +361,7 @@ export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onR
                   </button>
                 </span>
               </label>
-              <div className="auth-rc-row-between">
+              <div className="auth-rc-remember-only">
                 <label className="auth-rc-checkbox">
                   <input
                     type="checkbox"
@@ -380,9 +370,6 @@ export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onR
                   />
                   Remember me
                 </label>
-                <button type="button" className="auth-text-link auth-rc-forgot" onClick={() => setMode("forgot")}>
-                  Forgot Password?
-                </button>
               </div>
               {TURNSTILE_SITE_KEY ? (
                 <>
@@ -495,32 +482,6 @@ export function AuthPage({ busyMessage, onLogin, onSignup, onForgotPassword, onR
               ) : null}
               <button type="submit" className="auth-rc-btn-primary" disabled={Boolean(busyMessage)}>
                 {busyMessage || "Create account"}
-                <IconArrowRight />
-              </button>
-            </form>
-          ) : null}
-
-          {mode === "forgot" ? (
-            <form className="form-stack auth-rc-form" onSubmit={handleForgotSubmit}>
-              <h2 className="auth-rc-form__title">Reset your password</h2>
-              <p className="auth-rc-form__subtitle">
-                Enter the email on your account. We will send a one-hour link to set a new password.
-              </p>
-              <label className="auth-rc-label">
-                Email
-                <span className="auth-rc-input-shell">
-                  <IconUser />
-                  <input
-                    type="email"
-                    className="auth-rc-input"
-                    value={forgotEmail}
-                    onChange={(event) => setForgotEmail(event.target.value)}
-                    required
-                  />
-                </span>
-              </label>
-              <button type="submit" className="auth-rc-btn-primary" disabled={Boolean(busyMessage)}>
-                {busyMessage || "Send reset link"}
                 <IconArrowRight />
               </button>
             </form>

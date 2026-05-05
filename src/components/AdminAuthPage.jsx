@@ -114,6 +114,7 @@ export function AdminAuthPage({ apiBase, busyMessage, onLogin, onForgotPassword,
   const [registerSubmitting, setRegisterSubmitting] = useState(false);
   const [registerFormError, setRegisterFormError] = useState("");
   const lastDeskTabRef = useRef("login");
+  const registerInFlightRef = useRef(false);
 
   function bumpTurnstile() {
     if (!TURNSTILE_SITE_KEY) return;
@@ -184,6 +185,9 @@ export function AdminAuthPage({ apiBase, busyMessage, onLogin, onForgotPassword,
 
   async function handleDeskRegister(event) {
     event.preventDefault();
+    if (registerInFlightRef.current) {
+      return;
+    }
     setRegisterFormError("");
     setSignupCaptchaError("");
     setPasswordError("");
@@ -195,6 +199,7 @@ export function AdminAuthPage({ apiBase, busyMessage, onLogin, onForgotPassword,
       setPasswordError("Password must be 8–20 characters and include at least one letter and one number.");
       return;
     }
+    registerInFlightRef.current = true;
     setRegisterSubmitting(true);
     try {
       const response = await fetch(`${apiBase}/auth/register-admin`, {
@@ -218,6 +223,7 @@ export function AdminAuthPage({ apiBase, busyMessage, onLogin, onForgotPassword,
       onErrorToast?.("Could not create account", msg);
       bumpTurnstile();
     } finally {
+      registerInFlightRef.current = false;
       setRegisterSubmitting(false);
     }
   }

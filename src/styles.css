@@ -1200,6 +1200,89 @@ p {
   box-shadow: var(--shadow-sm);
 }
 
+/* Desk dashboard — staff password reset entry (opens modal) */
+.desk-reset-launcher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(22, 101, 52, 0.14);
+  background: linear-gradient(125deg, rgba(255, 252, 247, 0.98) 0%, rgba(236, 253, 245, 0.94) 55%, rgba(220, 252, 231, 0.88) 100%);
+  box-shadow: 0 14px 38px rgba(22, 101, 52, 0.1);
+}
+
+.desk-reset-launcher__copy {
+  min-width: min(100%, 18rem);
+  flex: 1;
+}
+
+.desk-reset-launcher__kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(22, 101, 52, 0.75);
+}
+
+.desk-reset-launcher__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink, #1c1917);
+  line-height: 1.25;
+}
+
+.desk-reset-launcher__hint {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(55, 48, 40, 0.78);
+  max-width: 36rem;
+}
+
+.desk-reset-launcher__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  padding: 0.72rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(180deg, #22a356 0%, #166534 100%);
+  box-shadow: 0 10px 28px rgba(22, 101, 52, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.desk-reset-launcher__btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(22, 101, 52, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.desk-reset-launcher__btn:focus-visible {
+  outline: 2px solid rgba(22, 101, 52, 0.55);
+  outline-offset: 3px;
+}
+
+.desk-reset-launcher__btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.desk-reset-launcher__btn svg {
+  flex-shrink: 0;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
@@ -3188,10 +3271,12 @@ tr:hover td {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  /* Above .topbar (50), notifications (55), and toasts (60) so dialogs aren’t hidden under the navbar */
+  z-index: 100;
   display: grid;
   place-items: center;
   padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
   background: rgba(27, 14, 8, 0.45);
   backdrop-filter: blur(6px);
 }
@@ -3866,6 +3951,12 @@ tr:hover td {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.auth-rc-remember-only {
+  display: flex;
+  align-items: center;
+  margin-top: 0.15rem;
 }
 
 .auth-rc-checkbox {

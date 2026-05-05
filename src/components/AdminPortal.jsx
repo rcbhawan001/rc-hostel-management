@@ -114,6 +114,13 @@ const isImageFile = (fileNameOrPath) =>
   /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(String(fileNameOrPath || ""));
 const isLikelyImageUrl = (value) => /^https?:\/\//i.test(String(value || ""));
 
+function passwordMeetsPolicyOffice(pw) {
+  const s = String(pw || "");
+  if (s.length < 8 || s.length > 20) return false;
+  if (!/[a-zA-Z]/.test(s) || !/[0-9]/.test(s)) return false;
+  return true;
+}
+
 function studentInitials(name) {
   if (!name || typeof name !== "string") return "?";
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -207,6 +214,7 @@ export function AdminPortal({
   onDeleteDocument,
   onCreateNotice,
   onDeleteNotice,
+  onAdminSetUserPassword,
 }) {
   if (!data) {
     return <LoaderScreen />;
@@ -220,6 +228,16 @@ export function AdminPortal({
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [studentViewMode, setStudentViewMode] = useState("read");
   const [studentDetailTab, setStudentDetailTab] = useState("profile");
+  const [officeNewPassword, setOfficeNewPassword] = useState("");
+  const [officeNewPassword2, setOfficeNewPassword2] = useState("");
+  const [officeConfirmStudentId, setOfficeConfirmStudentId] = useState("");
+  const [officePasswordError, setOfficePasswordError] = useState("");
+  const [deskAdminEmail, setDeskAdminEmail] = useState("");
+  const [deskAdminEmail2, setDeskAdminEmail2] = useState("");
+  const [deskAdminPassword, setDeskAdminPassword] = useState("");
+  const [deskAdminPassword2, setDeskAdminPassword2] = useState("");
+  const [deskAdminError, setDeskAdminError] = useState("");
+  const [staffResetModalOpen, setStaffResetModalOpen] = useState(false);
   const [studentForm, setStudentForm] = useState(emptyStudentForm);
   const [complaintNotes, setComplaintNotes] = useState({});
   const [leaveNotes, setLeaveNotes] = useState({});
@@ -449,6 +467,13 @@ export function AdminPortal({
       setSelectedStudentId("");
     }
   }, [selectedStudentId, studentById]);
+
+  useEffect(() => {
+    setOfficeNewPassword("");
+    setOfficeNewPassword2("");
+    setOfficeConfirmStudentId("");
+    setOfficePasswordError("");
+  }, [selectedStudentId]);
 
   // Rooms are now created via Billing -> Add rooms.
 
@@ -902,6 +927,74 @@ export function AdminPortal({
     setStudentDetailTab("profile");
   }
 
+  async function handleOfficeStudentPasswordSubmit(event) {
+    event.preventDefault();
+    setOfficePasswordError("");
+    if (!onAdminSetUserPassword || !selectedStudent) return;
+    if (!passwordMeetsPolicyOffice(officeNewPassword)) {
+      setOfficePasswordError("Password must be 8–20 characters and include at least one letter and one number.");
+      return;
+    }
+    if (officeNewPassword !== officeNewPassword2) {
+      setOfficePasswordError("Passwords do not match.");
+      return;
+    }
+    const ok = await onAdminSetUserPassword({
+      kind: "student",
+      studentId: selectedStudent.studentId,
+      newPassword: officeNewPassword,
+      confirm: officeConfirmStudentId.trim(),
+    });
+    if (ok) {
+      setOfficeNewPassword("");
+      setOfficeNewPassword2("");
+      setOfficeConfirmStudentId("");
+    }
+  }
+
+  function closeStaffResetModal() {
+    if (isSaving) return;
+    setStaffResetModalOpen(false);
+    setDeskAdminError("");
+    setDeskAdminEmail("");
+    setDeskAdminEmail2("");
+    setDeskAdminPassword("");
+    setDeskAdminPassword2("");
+  }
+
+  async function handleDeskAdminPasswordSubmit(event) {
+    event.preventDefault();
+    setDeskAdminError("");
+    if (!onAdminSetUserPassword) return;
+    if (!passwordMeetsPolicyOffice(deskAdminPassword)) {
+      setDeskAdminError("Password must be 8–20 characters and include at least one letter and one number.");
+      return;
+    }
+    if (deskAdminPassword !== deskAdminPassword2) {
+      setDeskAdminError("Passwords do not match.");
+      return;
+    }
+    const em = deskAdminEmail.trim().toLowerCase();
+    const em2 = deskAdminEmail2.trim().toLowerCase();
+    if (!em || em !== em2) {
+      setDeskAdminError("Enter the same staff email twice.");
+      return;
+    }
+    const ok = await onAdminSetUserPassword({
+      kind: "admin",
+      targetEmail: em,
+      newPassword: deskAdminPassword,
+      confirm: deskAdminEmail2.trim(),
+    });
+    if (ok) {
+      setDeskAdminEmail("");
+      setDeskAdminEmail2("");
+      setDeskAdminPassword("");
+      setDeskAdminPassword2("");
+      setStaffResetModalOpen(false);
+    }
+  }
+
   function handleDeleteStudent(studentId) {
     openModal({
       title: "Delete this student and linked records?",
@@ -1311,6 +1404,41 @@ export function AdminPortal({
                 />
               </div>
 
+              {onAdminSetUserPassword ? (
+                <div className="desk-reset-launcher">
+                  <div className="desk-reset-launcher__copy">
+                    <p className="desk-reset-launcher__kicker">Desk security</p>
+                    <p className="desk-reset-launcher__title">Another staff member locked out?</p>
+                    <p className="desk-reset-launcher__hint">
+                      After you verify them in person, open the secure form to set a new desk login password. Only use
+                      this for existing desk admin accounts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="desk-reset-launcher__btn"
+                    onClick={() => setStaffResetModalOpen(true)}
+                    disabled={isSaving}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path
+                        d="M12 3l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V7l8-4Z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 11v4m0-7h.01"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Reset staff login
+                  </button>
+                </div>
+              ) : null}
+
               <div className="dashboard-grid">
                 <div className="dashboard-col">
                   <SectionCard title="Occupancy">
@@ -1662,6 +1790,7 @@ export function AdminPortal({
                           { id: "profile", label: "Profile" },
                           { id: "documents", label: "Documents" },
                           { id: "bills", label: "Bills" },
+                          { id: "portal-login", label: "Portal login" },
                         ].map((tab) => (
                           <button
                             key={tab.id}
@@ -1977,6 +2106,66 @@ export function AdminPortal({
                           </div>
                         ) : (
                           <EmptyState title="No student selected" body="Select a student to manage bills." />
+                        )
+                      ) : null}
+
+                      {studentDetailTab === "portal-login" ? (
+                        selectedStudent ? (
+                          onAdminSetUserPassword ? (
+                            <form className="form-grid admin-student-form" onSubmit={handleOfficeStudentPasswordSubmit}>
+                              <p className="field-span-2" style={{ marginTop: 0, lineHeight: 1.5 }}>
+                                In-person only: set a new portal password after you verify the resident. They must have
+                                completed app sign-up at least once (a user login exists for this student ID).
+                              </p>
+                              <label className="field-span-2">
+                                New password
+                                <input
+                                  type="password"
+                                  autoComplete="new-password"
+                                  value={officeNewPassword}
+                                  onChange={(event) => setOfficeNewPassword(event.target.value)}
+                                  disabled={isSaving}
+                                />
+                              </label>
+                              <label className="field-span-2">
+                                Confirm new password
+                                <input
+                                  type="password"
+                                  autoComplete="new-password"
+                                  value={officeNewPassword2}
+                                  onChange={(event) => setOfficeNewPassword2(event.target.value)}
+                                  disabled={isSaving}
+                                />
+                              </label>
+                              <label className="field-span-2">
+                                Type student ID to confirm: {selectedStudent.studentId}
+                                <input
+                                  type="text"
+                                  value={officeConfirmStudentId}
+                                  onChange={(event) => setOfficeConfirmStudentId(event.target.value)}
+                                  autoComplete="off"
+                                  disabled={isSaving}
+                                />
+                              </label>
+                              {officePasswordError ? (
+                                <p className="field-span-2" role="alert" style={{ color: "var(--rose-11, #c62a2a)" }}>
+                                  {officePasswordError}
+                                </p>
+                              ) : null}
+                              <div className="field-span-2">
+                                <button type="submit" className="button button-primary" disabled={isSaving}>
+                                  {isSaving ? "Please wait…" : "Update portal password"}
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <EmptyState
+                              title="Not available"
+                              body="This screen is not connected in this build."
+                            />
+                          )
+                        ) : (
+                          <EmptyState title="No student selected" body="Select a student from the list." />
                         )
                       ) : null}
                     </div>
@@ -3170,6 +3359,86 @@ export function AdminPortal({
           </button>
         </div>
       </Modal>
+
+      {onAdminSetUserPassword ? (
+        <Modal
+          open={staffResetModalOpen}
+          title="Reset desk staff password"
+          onBackdropClick={closeStaffResetModal}
+          actions={
+            <>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={closeStaffResetModal}
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="desk-admin-reset-modal-form"
+                className="button button-primary"
+                disabled={isSaving}
+              >
+                {isSaving ? "Please wait…" : "Update password"}
+              </button>
+            </>
+          }
+        >
+          <form id="desk-admin-reset-modal-form" className="form-stack" onSubmit={handleDeskAdminPasswordSubmit}>
+            <p className="plain-empty" style={{ marginTop: 0 }}>
+              For a colleague who forgot their desk login. Enter their admin email twice, then set a new password to tell
+              them in person after identity checks.
+            </p>
+            <label>
+              Staff email
+              <input
+                type="email"
+                autoComplete="off"
+                value={deskAdminEmail}
+                onChange={(event) => setDeskAdminEmail(event.target.value)}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Confirm staff email
+              <input
+                type="email"
+                autoComplete="off"
+                value={deskAdminEmail2}
+                onChange={(event) => setDeskAdminEmail2(event.target.value)}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              New password
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={deskAdminPassword}
+                onChange={(event) => setDeskAdminPassword(event.target.value)}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Confirm new password
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={deskAdminPassword2}
+                onChange={(event) => setDeskAdminPassword2(event.target.value)}
+                disabled={isSaving}
+              />
+            </label>
+            {deskAdminError ? (
+              <p role="alert" style={{ color: "var(--rose-11, #c62a2a)", margin: 0 }}>
+                {deskAdminError}
+              </p>
+            ) : null}
+          </form>
+        </Modal>
+      ) : null}
 
       {/* Student quick view removed for focused edit UX */}
     </div>

@@ -129,6 +129,7 @@ export default function App() {
     };
   }
 
+  /** @returns {Promise<boolean>} */
   async function loadBootstrap(options = {}) {
     const shouldShowLoader = options.showLoader ?? !data;
     if (shouldShowLoader) {
@@ -146,8 +147,10 @@ export default function App() {
         setData(payload);
       });
       setError("");
+      return true;
     } catch (nextError) {
       setError(nextError.message);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -166,7 +169,11 @@ export default function App() {
         const user = await readResponse(meResponse);
         if (cancelled) return;
         setCurrentUser(user);
-        await loadBootstrap({ showLoader: false });
+        const bootOk = await loadBootstrap({ showLoader: false });
+        if (!bootOk && !cancelled) {
+          setCurrentUser(null);
+          setData(null);
+        }
       } catch (_nextError) {
         if (!cancelled) {
           setCurrentUser(null);
@@ -219,7 +226,15 @@ export default function App() {
       });
 
       await readResponse(response);
-      await loadBootstrap({ showLoader: false });
+      const bootOk = await loadBootstrap({ showLoader: false });
+      if (!bootOk) {
+        pushToast({
+          tone: "error",
+          title: "Saved but could not refresh",
+          body: "Try reloading the page.",
+        });
+        return false;
+      }
       pushToast({ tone: "success", title: successText });
       return true;
     } catch (nextError) {
@@ -242,7 +257,16 @@ export default function App() {
       });
       const result = await readResponse(response);
       setCurrentUser(result.user);
-      await loadBootstrap({ showLoader: false });
+      const bootOk = await loadBootstrap({ showLoader: false });
+      if (!bootOk) {
+        setCurrentUser(null);
+        pushToast({
+          tone: "error",
+          title: "Could not load your workspace",
+          body: "Try signing in again.",
+        });
+        return false;
+      }
       pushToast({ tone: "success", title: successText });
       return true;
     } catch (nextError) {
@@ -302,7 +326,8 @@ export default function App() {
       pushToast({
         tone: "success",
         title: "Password updated",
-        body: "You can sign in with your new password. Other devices were signed out.",
+        body: "You can sign in with your new password. Other sessions were signed out.",
+        timeoutMs: 6000,
       });
       return true;
     } catch (nextError) {
@@ -391,7 +416,18 @@ export default function App() {
                   onErrorToast={(title, body) => pushToast({ tone: "error", title, body })}
                   onRegisterSuccess={async (user) => {
                     setCurrentUser(user);
-                    await loadBootstrap({ showLoader: false });
+                    const bootOk = await loadBootstrap({ showLoader: false });
+                    if (!bootOk) {
+                      setCurrentUser(null);
+                      pushToast({
+                        tone: "error",
+                        title: "Account may be created",
+                        body:
+                          "The app could not start your session. Use Log in with the same email and password. If you see “already exists”, the account is there—log in only, do not register again.",
+                      });
+                      setAuthResolved(true);
+                      return;
+                    }
                     pushToast({
                       tone: "success",
                       title: "Admin account ready",
@@ -410,7 +446,6 @@ export default function App() {
                 busyMessage={busyMessage}
                 onLogin={(payload) => handleAuth("login", payload, "Logged in successfully.")}
                 onSignup={(payload) => handleAuth("signup", payload, "Account created and logged in.")}
-                onForgotPassword={handleForgotPassword}
                 onResetPassword={handleResetPassword}
               />
             }
@@ -629,7 +664,15 @@ export default function App() {
                         body: JSON.stringify(payload),
                       });
                       const student = await readResponse(response);
-                      await loadBootstrap({ showLoader: false });
+                      const bootOk = await loadBootstrap({ showLoader: false });
+                      if (!bootOk) {
+                        pushToast({
+                          tone: "error",
+                          title: "Student saved but refresh failed",
+                          body: "Reload the page to see updates.",
+                        });
+                        return student;
+                      }
                       pushToast({ tone: "success", title: "Student data submitted." });
                       return student;
                     } catch (nextError) {
@@ -853,6 +896,39 @@ export default function App() {
                       "Complaint deleted successfully.",
                     )
                   }
+                  onAdminSetUserPassword={async (body) => {
+                    setBusyMessage("Updating password…");
+                    try {
+                      const response = await fetch(`${apiBase}/admin/users/set-password`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: buildHeaders(),
+                        body: JSON.stringify(body),
+                      });
+                      await readResponse(response);
+                      const bootOk = await loadBootstrap({ showLoader: false });
+                      if (!bootOk) {
+                        pushToast({
+                          tone: "error",
+                          title: "Password saved but refresh failed",
+                          body: "Reload the page if lists look stale.",
+                        });
+                        return true;
+                      }
+                      pushToast({
+                        tone: "success",
+                        title: "Password updated",
+                        body:
+                          "They must sign in with the new password. Other sessions for that login were signed out.",
+                      });
+                      return true;
+                    } catch (nextError) {
+                      pushToast({ tone: "error", title: "Could not update password", body: nextError.message });
+                      return false;
+                    } finally {
+                      setBusyMessage("");
+                    }
+                  }}
                 />
               )
             }
@@ -947,7 +1023,15 @@ export default function App() {
                         },
                       );
                       await readResponse(response);
-                      await loadBootstrap({ showLoader: false });
+                      const bootOk = await loadBootstrap({ showLoader: false });
+                      if (!bootOk) {
+                        pushToast({
+                          tone: "error",
+                          title: "Photo updated but refresh failed",
+                          body: "Reload the page to see your photo.",
+                        });
+                        return true;
+                      }
                       pushToast({ tone: "success", title: "Profile photo updated." });
                       return true;
                     } catch (nextError) {
